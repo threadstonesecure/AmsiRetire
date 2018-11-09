@@ -16,10 +16,25 @@ import cloud.data.integration.common.util.CommonMethods;
 import gov.shelby.upload.service.UploadService;
 import gov.shelby.upload.util.*;
 
-public class UploadFiles {
+public class UploadFiles implements Runnable {
 	final static Logger logger = Logger.getLogger(UploadFiles.class);
+	
+	@Override
+	public void run() {
+		
+		try {
+			logger.debug("Starting new thread to processJournalImport for Import");
+			uploadFilesToFusion();
+			
+		}
+		catch(Exception e) {
+			logger.error("Exception: " +e.getMessage());
+			e.printStackTrace();
+		}
+		
+	}
 
-	public static void main(String[] args) {
+	public void uploadFilesToFusion() {
 
 		initializeLog4j();
 		System.setProperty("org.xml.sax.driver", "com.sun.org.apache.xerces.internal.parsers.SAXParser");

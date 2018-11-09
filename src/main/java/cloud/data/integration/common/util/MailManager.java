@@ -80,12 +80,15 @@ public class MailManager {
 	      Properties properties = System.getProperties();
 	     
 
-        
-	      properties.setProperty("mail.smtp.host", JournalUtil.getPropertyValue("MAIL_HOST_NAME"));
-	      properties.put("mail.smtp.auth", JournalUtil.getPropertyValue("MAIL_SMTP_AUTH"));
+	      properties.put("mail.smtp.protocol", "smtp");
+	      properties.put("mail.smtp.auth", "true");
 	      properties.put("mail.smtp.starttls.enable", "true");
+	      properties.put("mail.smtp.ssl.trust", "smtp.gmail.com");
+	      properties.put("mail.smtp.host", JournalUtil.getPropertyValue("MAIL_HOST_NAME"));
+	      //properties.put("mail.smtp.ssl.trust", "smtp.gmail.com");
+	      //properties.put("mail.smtp.auth", JournalUtil.getPropertyValue("MAIL_SMTP_AUTH"));
 	      properties.put("mail.smtp.port", JournalUtil.getPropertyValue("MAIL_HOST_PORT"));
-	      //properties.put("mail.debug", "true");
+	      properties.put("mail.debug", "true");
 	      //properties.setProperty("mail.smtp.password", MAIL_HOST_PASSWORD);
 	    
 	      // Get the default Session object.

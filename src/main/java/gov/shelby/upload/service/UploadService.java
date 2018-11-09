@@ -20,6 +20,8 @@ import cloud.data.integration.common.erpintegrationservice.webservice.ErpIntegra
 import cloud.data.integration.common.erpintegrationservice.webservice.ObjectFactory;
 import cloud.data.integration.common.erpintegrationservice.webservice.ServiceException;
 import cloud.data.integration.common.service.FusionCloudDataIntegrationService;
+import cloud.data.integration.common.util.CommonMethods;
+import cloud.data.integration.common.util.MailManager;
 import cloud.data.integration.module.journal.util.JournalUtil;
 
 public class UploadService {
@@ -145,19 +147,25 @@ final static Logger logger = Logger.getLogger(UploadService.class);
 		return essSubmittedJobStatusIL;
 	}
 
-	public static void checkStatusAndExecEmail(String essSubmittedJobStatusIL, Long jobRequestId) throws InterruptedException {
+	public static void checkStatusAndExecEmail(String essSubmittedJobStatusIL, Long jobRequestId) throws InterruptedException, IOException {
 
 		// String subject = null;
 		// String message = null;
 		long importRequestId = 0;
 		String importEssJobRequest = null;
+		String subject = null;
+		String message = null;
+		String localLogDirectory = JournalUtil.getPropertyValue("JOURNAL_LOG_DIRECTORY_NAME","dmi").trim();
 		if (essSubmittedJobStatusIL.equalsIgnoreCase("ERROR")) {
 			logger.debug(
 					"An error has occurred at Oracle Fusion Server while processing the submitted ESSJob");
-			downLoadExecDetailsAndSendEmail(jobRequestId, essSubmittedJobStatusIL);
+			subject = JournalUtil.getPropertyValue("MAIL_MESSAGE_ERROR_SUBJECT_LINE");
+			message = JournalUtil.getPropertyValue("MAIL_MESSAGE_ERROR_TEXT_FOR_JOURNAL_IMPORT");
+			downLoadExecDetailsAndSendEmail(jobRequestId, essSubmittedJobStatusIL, localLogDirectory, subject, message);
 		} else if (essSubmittedJobStatusIL.equalsIgnoreCase("SUCCEEDED")) {
 			logger.debug("SUCCEEDED !!! ");
-			downLoadExecDetailsAndSendEmail(jobRequestId, essSubmittedJobStatusIL);
+			subject = JournalUtil.getPropertyValue("MAIL_MESSAGE_SUCCESS_SUBJECT_LINE");
+			message = JournalUtil.getPropertyValue("MAIL_MESSAGE_SUCCESS_TEXT_FOR_JOURNAL_IMPORT");
 			importRequestId = submitESSJobRequestForJournalImport();
 			logger.debug("wait for 10 Sec");
 			logger.debug("Thread is started sleeping " + new Date());
@@ -167,13 +175,40 @@ final static Logger logger = Logger.getLogger(UploadService.class);
 			importEssJobRequest = getESSJobStatus(importRequestId);
 			logger.debug("End making a call to getJobStatus "+ new Date() );
 			logger.debug(" getJobStatus journalImportESSJobStatus [" + importEssJobRequest + "]");
+			if(importEssJobRequest.equalsIgnoreCase("SUCCEEDED")) {
+				downLoadExecDetailsAndSendEmail(importRequestId,importEssJobRequest,localLogDirectory,subject,message);
+			}
+			else if (importEssJobRequest.equalsIgnoreCase("ERROR")) {
+				logger.debug(
+						"An error has occurred at Oracle Fusion Server while processing the submitted ESSJob");
+				subject = JournalUtil.getPropertyValue("MAIL_MESSAGE_ERROR_SUBJECT_LINE");
+				message = JournalUtil.getPropertyValue("MAIL_MESSAGE_ERROR_TEXT_FOR_JOURNAL_IMPORT");
+				downLoadExecDetailsAndSendEmail(importRequestId,importEssJobRequest,localLogDirectory,subject,message);
+			} else if (importEssJobRequest.equalsIgnoreCase("SUCCEEDED")) {
+				subject = JournalUtil.getPropertyValue("MAIL_MESSAGE_SUCCESS_SUBJECT_LINE");
+				message = JournalUtil.getPropertyValue("MAIL_MESSAGE_SUCCESS_TEXT_FOR_JOURNAL_IMPORT");
+				downLoadExecDetailsAndSendEmail(importRequestId,importEssJobRequest,localLogDirectory,subject,message);
+			
+			} else if (importEssJobRequest.equalsIgnoreCase("WARNING")) {
+				subject = JournalUtil.getPropertyValue("MAIL_MESSAGE_WARNING_SUBJECT_LINE");
+				message = JournalUtil.getPropertyValue("MAIL_MESSAGE_WARNING_TEXT_FOR_JOURNAL_IMPORT");
+				downLoadExecDetailsAndSendEmail(importRequestId,importEssJobRequest,localLogDirectory,subject,message);
+			} else if (importEssJobRequest.equalsIgnoreCase("RUNNING")) {
+				subject = JournalUtil.getPropertyValue("MAIL_MESSAGE_RUNNING_SUBJECT_LINE");
+				message = JournalUtil.getPropertyValue("MAIL_MESSAGE_RUNNING_TEXT_FOR_JOURNAL_IMPORT");
+				downLoadExecDetailsAndSendEmail(importRequestId,importEssJobRequest,localLogDirectory,subject,message);
+			}
 			
 		} else if (essSubmittedJobStatusIL.equalsIgnoreCase("WARNING")) {
 			logger.debug("Warning State");
-			downLoadExecDetailsAndSendEmail(jobRequestId, essSubmittedJobStatusIL);
+			subject = JournalUtil.getPropertyValue("MAIL_MESSAGE_WARNING_SUBJECT_LINE");
+			message = JournalUtil.getPropertyValue("MAIL_MESSAGE_WARNING_TEXT_FOR_JOURNAL_IMPORT");
+			downLoadExecDetailsAndSendEmail(jobRequestId, essSubmittedJobStatusIL, localLogDirectory, subject, message);
 		} else if (essSubmittedJobStatusIL.equalsIgnoreCase("RUNNING")) {
 			logger.debug("Still in running State");
-			downLoadExecDetailsAndSendEmail(jobRequestId, essSubmittedJobStatusIL);
+			subject = JournalUtil.getPropertyValue("MAIL_MESSAGE_RUNNING_SUBJECT_LINE");
+			message = JournalUtil.getPropertyValue("MAIL_MESSAGE_RUNNING_TEXT_FOR_JOURNAL_IMPORT");
+			downLoadExecDetailsAndSendEmail(jobRequestId, essSubmittedJobStatusIL, localLogDirectory, subject, message);
 		}
 
 	}
@@ -203,7 +238,7 @@ final static Logger logger = Logger.getLogger(UploadService.class);
 		return essJobStatusId;
 	}
 
-	private static void downLoadExecDetailsAndSendEmail(Long jobRequestId, String essSubmittedJobStatusIL) {
+	private static void downLoadExecDetailsAndSendEmail(Long jobRequestId, String essSubmittedJobStatusIL, String localLogDirectory,String subject,String message ) throws IOException {
 		ErpIntegrationService erpService = FusionCloudDataIntegrationService.getErpIntegrationService();
 		List<DocumentDetails> jobExecutionDetails = null;
 		try {
@@ -216,7 +251,7 @@ final static Logger logger = Logger.getLogger(UploadService.class);
 		
 		byte[] fileContent;
 		String fileName = null;
-		String subject = null;
+		//String subject = null;
 		
 		logger.debug(jobExecutionDetails.size());
 
@@ -228,15 +263,12 @@ final static Logger logger = Logger.getLogger(UploadService.class);
 				logger.debug("Job Execution Detail: FileName: " + fileName);
 				fileContent = jobExecDetail.getContent();
 				// File logFile = new File(localLogDirectory + "/"+fileName);
-				//Path logFilePath = FileSystems.getDefault().getPath(localLogDirectory, fileName);
-				//Files.write(logFilePath, fileContent, StandardOpenOption.CREATE_NEW);
-//				subject=essSubmittedJobStatus+" "+subject+" - "+fileName;
-//				subject=subject.substring(0, subject.lastIndexOf("."));
+				Path logFilePath = FileSystems.getDefault().getPath(localLogDirectory, fileName);
+				Files.write(logFilePath, fileContent, StandardOpenOption.CREATE_NEW);
+				subject=essSubmittedJobStatusIL+" "+subject+" - "+fileName;
+				subject=subject.substring(0, subject.lastIndexOf("."));
 				logger.debug("subject"+subject);
-//				MailManager.sendMailWithAttachment(JournalUtil.getPropertyValue("MAIL_USER_FROM_ADDRESS"),
-//						JournalUtil.getPropertyValue("MAIL_USER_TO_ADDRESS"), subject, message,
-//						localLogDirectory + "/" + fileName);
-				
+//				
 				logger.debug("message send and deleting files under unzip folder");
 				//Thread.sleep(300000);
 //				File logZipFilePath=new File(localLogDirectory);
@@ -249,9 +281,76 @@ final static Logger logger = Logger.getLogger(UploadService.class);
 				
 				
 			}
+			File filePath = new File(JournalUtil.getPropertyValue("JOURNAL_DOWNLOAD_FILES", "dmi"));
+			File downloadedSourceFiles = new File(JournalUtil.getPropertyValue("JOURNAL_LOG_DIRECTORY_NAME", "dmi"));
+			File[] downloadedFilesList = downloadedSourceFiles.listFiles(); // get all the downloaded logs files, add to list, zip the files
+			List<File> downloadedFileList = new ArrayList<File>();
+			for (File file : downloadedFilesList) {
+				logger.debug("Let us process file: " + file.getAbsolutePath());
+				downloadedFileList.add(file);
+			}
+			CommonMethods.zipFiles(filePath, downloadedFileList);
+			File fileList = new File(JournalUtil.getPropertyValue("JOURNAL_FILES", "dmi").trim());
+			File[] files =   fileList.listFiles();
+			CommonMethods.moveFiles(files, JournalUtil.getPropertyValue("JOURNAL_PROCESSED_FILE_PATH", "dmi"));
+			String fileToSend = JournalUtil.getPropertyValue("JOURNAL_PROCESSED_FILE", "dmi");
+			MailManager.sendMailWithAttachment(JournalUtil.getPropertyValue("MAIL_USER_FROM_ADDRESS"),
+				JournalUtil.getPropertyValue("MAIL_USER_TO_ADDRESS"), subject, message,
+				fileToSend);
+			File deleteDirectoryPath =new File(JournalUtil.getPropertyValue("JOURNAL_LOG_DIRECTORY_NAME", "dmi"));
+			File[] filesDeletList = deleteDirectoryPath.listFiles();
+			for (int i = 0; i < filesDeletList.length; i++) {
+				logger.debug("dataFilesDeletList[i].getName()"+filesDeletList[i].getName());
+				CommonMethods.deleteFile(localLogDirectory+"\\"+filesDeletList[i].getName());
+				logger.debug("End deleting file"+localLogDirectory+filesDeletList[i].getName());
+			}
+			File deleteProcessesFilesDirectoryPath =new File(JournalUtil.getPropertyValue("JOURNAL_PROCESSED_FILE_PATH", "dmi"));
+			File[] ProcessesfilesList = deleteProcessesFilesDirectoryPath.listFiles();
+			for (int i = 0; i < ProcessesfilesList.length; i++) {
+				logger.debug("dataFilesDeletList[i].getName()"+filesDeletList[i].getName());
+				CommonMethods.deleteFile(deleteProcessesFilesDirectoryPath+"\\"+ProcessesfilesList[i].getName());
+				logger.debug("End deleting file"+deleteProcessesFilesDirectoryPath+ProcessesfilesList[i].getName());
+			}
 		}
 		
 		
+		
+	}
+	
+	public static void zipDownloadedFilesAndSendMail() throws IOException {
+		String localLogDirectory = JournalUtil.getPropertyValue("JOURNAL_LOG_DIRECTORY_NAME","dmi").trim();
+		String subject = "AMSI JOURNAL";
+		String message = "AMSI JOURNAL";
+		File filePath = new File(JournalUtil.getPropertyValue("JOURNAL_DOWNLOAD_FILES", "dmi"));
+		File downloadedSourceFiles = new File(JournalUtil.getPropertyValue("JOURNAL_LOG_DIRECTORY_NAME", "dmi"));
+		File[] downloadedFilesList = downloadedSourceFiles.listFiles(); // get all the downloaded logs files, add to list, zip the files
+		List<File> downloadedFileList = new ArrayList<File>();
+		for (File file : downloadedFilesList) {
+			logger.debug("Let us process file: " + file.getAbsolutePath());
+			downloadedFileList.add(file);
+		}
+		CommonMethods.zipFiles(filePath, downloadedFileList);
+		File fileList = new File(JournalUtil.getPropertyValue("JOURNAL_FILES", "dmi").trim());
+		File[] files =   fileList.listFiles();
+		CommonMethods.moveFiles(files, JournalUtil.getPropertyValue("JOURNAL_PROCESSED_FILE_PATH", "dmi"));
+		String fileToSend = JournalUtil.getPropertyValue("JOURNAL_PROCESSED_FILE", "dmi");
+		MailManager.sendMailWithAttachment(JournalUtil.getPropertyValue("MAIL_USER_FROM_ADDRESS"),
+			JournalUtil.getPropertyValue("MAIL_USER_TO_ADDRESS"), subject, message,
+			fileToSend);
+		File deleteDirectoryPath =new File(JournalUtil.getPropertyValue("JOURNAL_LOG_DIRECTORY_NAME", "dmi"));
+		File[] filesDeletList = deleteDirectoryPath.listFiles();
+		for (int i = 0; i < filesDeletList.length; i++) {
+			logger.debug("dataFilesDeletList[i].getName()"+filesDeletList[i].getName());
+			CommonMethods.deleteFile(localLogDirectory+"\\"+filesDeletList[i].getName());
+			logger.debug("End deleting file"+localLogDirectory+filesDeletList[i].getName());
+		}
+		File deleteProcessesFilesDirectoryPath =new File(JournalUtil.getPropertyValue("JOURNAL_PROCESSED_FILE_PATH", "dmi"));
+		File[] ProcessesfilesList = deleteProcessesFilesDirectoryPath.listFiles();
+		for (int i = 0; i < ProcessesfilesList.length; i++) {
+			logger.debug("dataFilesDeletList[i].getName()"+filesDeletList[i].getName());
+			CommonMethods.deleteFile(deleteProcessesFilesDirectoryPath+"\\"+ProcessesfilesList[i].getName());
+			logger.debug("End deleting file"+deleteProcessesFilesDirectoryPath+ProcessesfilesList[i].getName());
+		}
 		
 	}
 	
