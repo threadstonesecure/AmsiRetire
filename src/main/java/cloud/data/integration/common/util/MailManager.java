@@ -20,12 +20,13 @@ import javax.mail.internet.MimeMultipart;
 
 import org.apache.log4j.Logger;
 
-import cloud.data.integration.module.journal.service.JournalImportService;
 import cloud.data.integration.module.journal.util.JournalUtil;
+
+
 
 /**
  * 
- * @author LBerwa
+ * @author sthota
  *
  */
 public class MailManager {
@@ -35,10 +36,10 @@ public class MailManager {
 	
 
 	
-	/*public static void main(String args[]) {
-	//	MailManager mail = new MailManager();
-	//	mail.sendMailWithAttachment("sbalawatri@cherryroad.com", "sbalawatri@cherryroad.com", "Hello", "Hello Scott.....Test Message......Coming from the integration app....", "C:\\sud\\TEST_REPORT_REQUEST.xml");
-	}*/
+//	public static void main(String args[]) {
+//		MailManager mail = new MailManager();
+//		mail.sendMailWithAttachment("rocknaga81@gmail.com", "nagaraju.chidarla@gmail.com", "Hello", "Hello Scott.....Test Message......Coming from the integration app....", "E:\\shelby\\shelby_files\\FaMassAdditions.csv");
+//	}
 
 	public static void sendMail(String from, String to, String subject, String appMessage) {
 		// Get system properties
@@ -79,16 +80,18 @@ public class MailManager {
 		// Get system properties
 	      Properties properties = System.getProperties();
 	     
-
 	      properties.put("mail.smtp.protocol", "smtp");
+	     //  properties.put("https.protocols", "TLSv1,TLSv1.1,TLSv1.2");
 	      properties.put("mail.smtp.auth", "true");
-	      properties.put("mail.smtp.starttls.enable", "true");
-	      properties.put("mail.smtp.ssl.trust", "smtp.gmail.com");
-	      properties.put("mail.smtp.host", JournalUtil.getPropertyValue("MAIL_HOST_NAME"));
+	      // properties.put("mail.smtp.ssl.trust", "*");
 	      //properties.put("mail.smtp.ssl.trust", "smtp.gmail.com");
-	      //properties.put("mail.smtp.auth", JournalUtil.getPropertyValue("MAIL_SMTP_AUTH"));
+	      properties.put("mail.smtp.starttls.enable", "true");
+	      properties.put("mail.smtp.host", JournalUtil.getPropertyValue("MAIL_HOST_NAME"));
 	      properties.put("mail.smtp.port", JournalUtil.getPropertyValue("MAIL_HOST_PORT"));
+	      //properties.put("mail.smtp.auth", JournalUtil.getPropertyValue("MAIL_SMTP_AUTH"));
 	      properties.put("mail.debug", "true");
+	      
+	      //properties.put("mail.debug", "true");
 	      //properties.setProperty("mail.smtp.password", MAIL_HOST_PASSWORD);
 	    
 	      // Get the default Session object.
