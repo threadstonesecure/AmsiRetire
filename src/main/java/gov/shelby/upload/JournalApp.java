@@ -18,10 +18,10 @@ public class JournalApp {
 	public static void main(String args[]) throws IOException {
 		initializeLog4j();
 		logger.debug("Starting main thread"+ new Date() );
-		UploadFiles uploadFile = new UploadFiles();
-		Thread t = new Thread(uploadFile);
-		t.run();
-		//UploadService.zipDownloadedFilesAndSendMail();
+//		UploadFiles uploadFile = new UploadFiles();
+//		Thread t = new Thread(uploadFile);
+//		t.run();
+		UploadService.zipDownloadedFilesAndSendMail();
 		logger.debug("End main thread"+ new Date());
 		
 	}

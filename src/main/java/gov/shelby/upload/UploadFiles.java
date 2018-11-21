@@ -36,7 +36,6 @@ public class UploadFiles implements Runnable {
 
 	public void uploadFilesToFusion() {
 
-		initializeLog4j();
 		System.setProperty("org.xml.sax.driver", "com.sun.org.apache.xerces.internal.parsers.SAXParser");
 		System.setProperty("javax.xml.parsers.DocumentBuilderFactory",
 				"com.sun.org.apache.xerces.internal.jaxp.DocumentBuilderFactoryImpl");
@@ -48,8 +47,7 @@ public class UploadFiles implements Runnable {
 			String archiveLocation = JournalUtil.getPropertyValue("JOURNAL_PROCESSED_FILE_PATH", "dmi");
 			String zipFileNameAndLocation = JournalUtil.getPropertyValue("JOURNAL_ZIP_FILE_PATH_NAME", "dmi");
 			String localLogDirectory = JournalUtil.getPropertyValue("JOURNAL_LOG_DIRECTORY_NAME", "dmi").trim();
-//			String inboundFileName = JournalUtil.getPropertyValue("JOURNAL_INBOUND_CSV_COLUMN_MAPPED_FILE_NAME", "dmi")
-//					.trim();
+
 			String docAccount = "fin$/assets$/import$";
 			long jobRequestId = 0;
 			String essSubmittedJobStatusIL = null;

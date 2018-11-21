@@ -99,6 +99,7 @@ public class MailManager {
 	       
 	      Session session = Session.getDefaultInstance(properties, new javax.mail.Authenticator() {
 				protected PasswordAuthentication getPasswordAuthentication() {
+					logger.debug(JournalUtil.getPropertyValue("MAIL_USER_PASSWORD"));
 					return new PasswordAuthentication(JournalUtil.getPropertyValue("MAIL_USER_NAME"), 
 							JournalUtil.getPropertyValue("MAIL_USER_PASSWORD"));
 				}
